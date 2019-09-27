@@ -20,7 +20,7 @@ def read_root():
 
 
 @app.get("/synchronize")
-def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: bool = False):
+def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: bool = False, infer_phase_transition_buffer: float = 5.0):
 
     if phase_length is not None and infer_phase_length:
         return {
@@ -51,9 +51,9 @@ def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: 
     if infer_phase_length:
         time_difference = time.time() - float(data_dict["last_synchronization_time"])
         if bool(data_dict["last_synchronization_is_green"]):
-            data_dict["phase_durations"]["green"] = time_difference
+            data_dict["phase_durations"]["green"] = time_difference - infer_phase_transition_buffer
         else:
-            data_dict["phase_durations"]["red"] = time_difference
+            data_dict["phase_durations"]["red"] = time_difference - infer_phase_transition_buffer
 
     if phase_length is not None:
         if is_green:
