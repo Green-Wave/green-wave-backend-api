@@ -3,6 +3,7 @@ import os
 import re
 from pathlib import Path
 from fastapi import FastAPI
+import datetime
 
 app = FastAPI()
 
@@ -18,10 +19,11 @@ def read_root():
 @app.get("/seconds_phase_left")
 def get_seconds_phase_left():
     # mockup
+    seconds_phase_total = 40.000
     return {
         "id_light": 1,
         "is_green": True,
         "is_red": False,
-        "seconds_phase_left": 35.123,
-        "seconds_phase_total": 40.000,
+        "seconds_phase_left": seconds_phase_total - (datetime.datetime.now().timestamp() % 40),
+        "seconds_phase_total": seconds_phase_total,
     }
