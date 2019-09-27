@@ -9,9 +9,6 @@ import datetime
 
 app = FastAPI()
 
-times_list = []
-
-
 @app.get("/")
 def read_root():
     return {
