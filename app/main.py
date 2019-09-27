@@ -85,7 +85,8 @@ def get_seconds_phase_left():
                 False: data_dict["phase_durations"]["red"]
             }
 
-            time_difference = time.time() - float(data_dict["last_synchronization_time"])
+            time_difference_sync = time.time() - float(data_dict["last_synchronization_time"])
+            time_difference = time_difference_sync
             current_phase_green = bool(data_dict["last_synchronization_is_green"])
 
             while True:
@@ -104,7 +105,8 @@ def get_seconds_phase_left():
                 "is_red": not current_phase_green,
                 "seconds_phase_left": phase_durations[current_phase_green] - time_difference,
                 "seconds_phase_total": phase_durations[current_phase_green],
-                "time_difference": time_difference
+                "time_since_last_toogle": time_difference,
+                "time_since_last_sync": time_difference_sync
             }
 
     else:
