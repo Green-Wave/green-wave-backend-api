@@ -19,30 +19,92 @@ def read_root():
     }
 
 
-@app.get("/update_phase")
-def update_phase(is_green: bool, phase_length: float):
-    data = {
-        "is_green": is_green,
-        "phase_length": phase_length,
-        "commit_time": time.time()
-    }
-    with open("data.json", "w") as data_file:
-        json.dump(data, data_file)
+@app.get("/synchronize")
+def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: bool = False):
 
+    if phase_length is not None and infer_phase_length:
+        return {
+            "status": "ERROR",
+            "message": "Phase length cannot be updated at the same time while automatically infering the phase length",
+            "id_light": 1,
+            "data": ""
+        }
+
+    data_dict = None
+
+    if os.path.isfile("data.json"):
+        with open("data.json", "r") as data_file:
+            data_dict = json.load(data_file)
+
+    if data_dict is None:
+        # this should only be executed if the data file is not present yet => first time
+        data_dict = {
+            "last_synchronization_time": time.time() - 40.0,
+            "last_synchronization_is_green": not is_green,
+            "phase_durations": {
+                "red": 50.0,
+                "green": 40.0
+	        }
+        }
+        
+    # update phase lengths if needed
+    if infer_phase_length:
+        time_difference = time.time() - float(data_dict["last_synchronization_time"])
+        if bool(data_dict["last_synchronization_is_green"]):
+            data_dict["phase_durations"]["green"] = time_difference
+        else:
+            data_dict["phase_durations"]["red"] = time_difference
+
+    if phase_length is not None:
+        if is_green:
+            data_dict["phase_durations"]["green"] = phase_length
+        else:
+            data_dict["phase_durations"]["red"] = phase_length
+
+    data_dict["last_synchronization_time"] = time.time()
+    data_dict["last_synchronization_is_green"] = is_green
+    
+    with open("data.json", "w") as data_file:
+        json.dump(data_dict, data_file)
+
+    return {
+        "status": "SUCCESS",
+        "message": "",
+        "id_light": 1,
+        "data": data_dict
+    }
 
 @app.get("/seconds_phase_left")
 def get_seconds_phase_left():
     if os.path.isfile("data.json"):
         with open("data.json", "r") as data_file:
             data_dict = json.load(data_file)
+
+            phase_durations = {
+                True: data_dict["phase_durations"]["green"],
+                False: data_dict["phase_durations"]["red"]
+            }
+
+            time_difference = time.time() - float(data_dict["last_synchronization_time"])
+            current_phase_green = bool(data_dict["last_synchronization_is_green"])
+
+            while True:
+                # TODO: make this more beautiful, e.g. by saving the last toogle time
+                if time_difference < phase_durations[current_phase_green]:
+                    break
+                else:
+                    time_difference = time_difference - phase_durations[current_phase_green]
+                    current_phase_green = not current_phase_green
+
             return {
                 "status": "OK",
                 "message": "",
                 "id_light": 1,
-                "is_green": bool(data_dict["is_green"]),
-                "is_red": not bool(data_dict["is_green"]),
-                "seconds_phase_left": data_dict["commit_time"] - time.time(),
-                "seconds_phase_total": data_dict["phase_length"],
+                "is_green": current_phase_green,
+                "is_red": not current_phase_green,
+                "seconds_phase_left": phase_durations[current_phase_green] - time_difference,
+                "seconds_phase_total": phase_durations[current_phase_green],
+                "time_difference": time_difference
             }
 
     else:
