@@ -22,5 +22,6 @@ def get_seconds_phase_left():
         "id_light": 1,
         "is_green": True,
         "is_red": False,
-        "seconds_phase_left": 35.123
+        "seconds_phase_left": 35.123,
+        "seconds_phase_total": 40.000,
     }
