@@ -4,11 +4,30 @@ import os
 import json
 import time
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
+from starlette.requests import Request
+from starlette.responses import Response
+
+from . import crud, models, schemas
+from .database import SessionLocal, engine
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
 times_list = []
+
+
+@app.middleware("http")
+async def db_session_middleware(request: Request, call_next):
+    response = Response("Internal server error", status_code=500)
+    try:
+        request.state.db = SessionLocal()
+        response = await call_next(request)
+    finally:
+        request.state.db.close()
+    return response
 
 
 @app.get("/")
@@ -17,6 +36,26 @@ def read_root():
         "message": "Congratulations, you have reached the green wave backend API, Muenster's awesome new quality of life enhancement for the cities bikers. You can find this API's documentation at http://<server address>/docs"
     }
 
+
+def get_db(request: Request):
+    return request.state.db
+
+
+
+
+# @app.get("/trafficlightphase/{trafficlightphase_id}", response_model=schemas.TrafficlightPhase)
+# def read_trafficlightphase(trafficlightphase_id: int, db: Session = Depends(get_db)):
+#     db_trafficlightphase = crud.get_trafficlightphase(db, trafficlightphase_id=trafficlightphase_id)
+#     if db_trafficlightphase is None:
+#         raise HTTPException(status_code=404, detail="Trafficlight phase not found")
+#     return db_trafficlightphase
+
+
+# @app.post("/trafficlightphase/", response_model=schemas.TrafficlightPhase)
+# def create_trafficlightphase(
+#     trafficlightphase: schemas.TrafficlightPhase, db: Session = Depends(get_db)
+# ):
+#     return crud.create_trafficlightphase(db=db, trafficlightphase=trafficlightphase)
 
 @app.get("/update_phase")
 def update_phase(is_green: bool, phase_length: float):
