@@ -117,31 +117,4 @@ def get_seconds_phase_left():
             "seconds_phase_left": 40.000,
             "seconds_phase_total": 40.000,
         }
-
-@app.get("/seconds_phase_left_mockup_dynamic")
-def seconds_phase_left_mockup_dynamic():
-    # mockup
-    seconds_phase_total = 40.000
-    return {
-        "status": "OK",
-        "message": "",
-        "id_light": 1,
-        "is_green": True,
-        "is_red": False,
-        "seconds_phase_left": seconds_phase_total - (datetime.datetime.now().timestamp() % 40),
-        "seconds_phase_total": seconds_phase_total,
-    }
-
-@app.get("/seconds_phase_left_mockup_static")
-def seconds_phase_left_mockup_static():
-    # mockup
-    seconds_phase_total = 40.000
-    return {
-        "status": "OK",
-        "message": "",
-        "id_light": 1,
-        "is_green": True,
-        "is_red": False,
-        "seconds_phase_left": 35.123,
-        "seconds_phase_total": 40.000,
-    }
+        
