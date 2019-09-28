@@ -9,6 +9,7 @@ import datetime
 
 app = FastAPI()
 
+
 @app.get("/")
 def read_root():
     return {
@@ -16,15 +17,45 @@ def read_root():
     }
 
 
+def get_initial_data_dict(is_green: bool):
+    data_dict = {
+        "last_synchronization_time": time.time() - 40.0,
+        "last_synchronization_is_green": not is_green,
+        "phase_durations": {"red": 38.0, "green": 49.0},
+        "phase_end_delay": 3.0,
+    }
+    return data_dict
+
+
+@app.get("/set_phase_end_delay")
+def set_phase_end_delay(phase_end_delay: float = 3.0):
+    data_dict = None
+
+    if os.path.isfile("data.json"):
+        with open("data.json", "r") as data_file:
+            data_dict = json.load(data_file)
+
+    if data_dict is None:
+        # this should only be executed if the data file is not present yet => first time
+        data_dict = get_initial_data_dict(False)
+
+    data_dict["phase_end_delay"] = phase_end_delay
+
+    with open("data.json", "w") as data_file:
+        json.dump(data_dict, data_file)
+
+    return {"status": "SUCCESS", "message": "", "id_light": 1, "data": data_dict}
+
+
 @app.get("/synchronize")
-def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: bool = False, infer_phase_transition_buffer: float = 5.0):
+def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: bool = False):
 
     if phase_length is not None and infer_phase_length:
         return {
             "status": "ERROR",
             "message": "Phase length cannot be updated at the same time while automatically infering the phase length",
             "id_light": 1,
-            "data": ""
+            "data": "",
         }
 
     data_dict = None
@@ -35,22 +66,15 @@ def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: 
 
     if data_dict is None:
         # this should only be executed if the data file is not present yet => first time
-        data_dict = {
-            "last_synchronization_time": time.time() - 40.0,
-            "last_synchronization_is_green": not is_green,
-            "phase_durations": {
-                "red": 50.0,
-                "green": 40.0
-	        }
-        }
-        
+        data_dict = get_initial_data_dict(is_green)
+
     # update phase lengths if needed
     if infer_phase_length:
         time_difference = time.time() - float(data_dict["last_synchronization_time"])
         if bool(data_dict["last_synchronization_is_green"]):
-            data_dict["phase_durations"]["green"] = time_difference - infer_phase_transition_buffer
+            data_dict["phase_durations"]["green"] = time_difference
         else:
-            data_dict["phase_durations"]["red"] = time_difference - infer_phase_transition_buffer
+            data_dict["phase_durations"]["red"] = time_difference
 
     if phase_length is not None:
         if is_green:
@@ -60,16 +84,12 @@ def synchronize(is_green: bool, phase_length: float = None, infer_phase_length: 
 
     data_dict["last_synchronization_time"] = time.time()
     data_dict["last_synchronization_is_green"] = is_green
-    
+
     with open("data.json", "w") as data_file:
         json.dump(data_dict, data_file)
 
-    return {
-        "status": "SUCCESS",
-        "message": "",
-        "id_light": 1,
-        "data": data_dict
-    }
+    return {"status": "SUCCESS", "message": "", "id_light": 1, "data": data_dict}
+
 
 @app.get("/seconds_phase_left")
 def get_seconds_phase_left():
@@ -79,7 +99,7 @@ def get_seconds_phase_left():
 
             phase_durations = {
                 True: data_dict["phase_durations"]["green"],
-                False: data_dict["phase_durations"]["red"]
+                False: data_dict["phase_durations"]["red"],
             }
 
             time_difference_sync = time.time() - float(data_dict["last_synchronization_time"])
@@ -103,7 +123,8 @@ def get_seconds_phase_left():
                 "seconds_phase_left": phase_durations[current_phase_green] - time_difference,
                 "seconds_phase_total": phase_durations[current_phase_green],
                 "time_since_last_toogle": time_difference,
-                "time_since_last_sync": time_difference_sync
+                "time_since_last_sync": time_difference_sync,
+                "phase_end_delay": data_dict["phase_end_delay"],
             }
 
     else:
@@ -116,7 +137,11 @@ def get_seconds_phase_left():
             "is_red": False,
             "seconds_phase_left": 40.000,
             "seconds_phase_total": 40.000,
+            "time_since_last_toogle": 0.0,
+            "time_since_last_sync": 0.0,
+            "phase_end_delay": 3.0,
         }
+
 
 @app.get("/seconds_phase_left_mockup_dynamic")
 def seconds_phase_left_mockup_dynamic():
@@ -131,6 +156,7 @@ def seconds_phase_left_mockup_dynamic():
         "seconds_phase_left": seconds_phase_total - (datetime.datetime.now().timestamp() % 40),
         "seconds_phase_total": seconds_phase_total,
     }
+
 
 @app.get("/seconds_phase_left_mockup_static")
 def seconds_phase_left_mockup_static():

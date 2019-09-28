@@ -1,2 +1,2 @@
 #!/bin/bash
-uvicorn main:app
+uvicorn app.main:app
