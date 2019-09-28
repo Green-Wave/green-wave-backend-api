@@ -86,13 +86,13 @@ def get_seconds_phase_left():
             time_difference = time_difference_sync
             current_phase_green = bool(data_dict["last_synchronization_is_green"])
 
-            while True:
-                # TODO: make this more beautiful, e.g. by saving the last toogle time
-                if time_difference < phase_durations[current_phase_green]:
-                    break
-                else:
-                    time_difference = time_difference - phase_durations[current_phase_green]
-                    current_phase_green = not current_phase_green
+            # while True:
+            #     # TODO: make this more beautiful, e.g. by saving the last toogle time
+            #     if time_difference < phase_durations[current_phase_green]:
+            #         break
+            #     else:
+            #         time_difference = time_difference - phase_durations[current_phase_green]
+            #         current_phase_green = not current_phase_green
 
             return {
                 "status": "OK",
@@ -100,7 +100,7 @@ def get_seconds_phase_left():
                 "id_light": 1,
                 "is_green": current_phase_green,
                 "is_red": not current_phase_green,
-                "seconds_phase_left": phase_durations[current_phase_green] - time_difference,
+                "seconds_phase_left": max(phase_durations[current_phase_green] - time_difference, 0.0),
                 "seconds_phase_total": phase_durations[current_phase_green],
                 "time_since_last_toogle": time_difference,
                 "time_since_last_sync": time_difference_sync
